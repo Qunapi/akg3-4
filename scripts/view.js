@@ -18,7 +18,7 @@ export class View extends Bitmap {
     this.sunIntensity = 0.5;
     this.sunPosRelativeToZero = new Vector3(1, 0.5, 0.3).normalized();
     this.ambient = 0.2;
-    this.specularIntensity = 1024;
+    this.specularIntensity = 64;
 
     this.transform = new Matrix4();
     this.difuseMap = Resources.textures.sample0;
@@ -42,8 +42,8 @@ export class View extends Bitmap {
   }
 
   update(delta) {
-    // let matrix = new Matrix4().rotate(0, delta * 1.5, 0);
-    let matrix = new Matrix4();
+    let matrix = new Matrix4().rotate(0, delta * 1.5, 0);
+    // let matrix = new Matrix4();
 
     this.sunPosRelativeToZero = matrix
       .mulVector(this.sunPosRelativeToZero, 0)
