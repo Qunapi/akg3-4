@@ -19,6 +19,7 @@ export class View extends Bitmap {
     this.sunPosRelativeToZero = new Vector3(1, 0.5, 0.3).normalized();
     this.ambient = 0.2;
     this.specularIntensity = 64;
+    this.specularCoef = 1;
 
     this.transform = new Matrix4();
     this.difuseMap = Resources.textures.sample0;
@@ -61,6 +62,7 @@ export class View extends Bitmap {
 
     this.renderScene();
   }
+  logged = false;
 
   renderScene() {
     this.renderFlag = 0;
@@ -69,11 +71,16 @@ export class View extends Bitmap {
     // this.transform = this.transform.rotate(0, time, 0);
     this.transform = this.transform.scale(0.5);
     // this.setTexture(Resources.textures.brickwall, Resources.textures.brickwall_normal);
+    // if (this.logged === false && Resources.models.man) {
+    //   console.log(Resources.models.man);
+    //   this.logged = true;
+    // }
     this.setTexture(
-      Resources.textures.white,
-      undefined,
+      Resources.textures.diffuse,
+      Resources.textures.normals,
       this.specularIntensity,
-      undefined
+      undefined,
+      Resources.textures.specular
     );
     this.drawModel(Resources.models.man);
   }
@@ -375,7 +382,6 @@ export class View extends Bitmap {
         drawVertices.push(cv);
       }
     }
-
     switch (drawVertices.length) {
       case 3:
         this.drawTriangleVS(drawVertices[0], drawVertices[1], drawVertices[2]);
@@ -460,32 +466,38 @@ export class View extends Bitmap {
             z2,
             z
           );
+
           const pixelPos = vp0.pos
             .mul(w0)
             .add(vp1.pos.mul(w1))
             .add(vp2.pos.mul(w2))
             .mulXYZ(1, 1, -1);
-          // let c = Util.lerp3AttributeVec3(v0.color, v1.color, v2.color, w0, w1, w2, z0, z1, z2, z);
-          let pixelNormal = Util.lerp3AttributeVec3(
-            vp0.normal,
-            vp1.normal,
-            vp2.normal,
-            w0,
-            w1,
-            w2,
-            z0,
-            z1,
-            z2,
-            z
-          );
+
+          let pixelNormal = undefined;
+          //  Util.lerp3AttributeVec3(
+          //   vp0.normal,
+          //   vp1.normal,
+          //   vp2.normal,
+          //   w0,
+          //   w1,
+          //   w2,
+          //   z0,
+          //   z1,
+          //   z2,
+          //   z
+          // );
 
           if (this.normalMap != undefined) {
+            // console.log(this.normalMap);
             let sampledNormal = this.sample(this.normalMap, uv.x, uv.y);
             sampledNormal =
               Util.convertColor2VectorRange2(sampledNormal).normalized();
-            if (((this.renderFlag >> 6) & 1) != 1) sampledNormal.y *= -1;
+            // if (((this.renderFlag 1>> 6) & 1) != 1) sampledNormal.y *= -1;
+            // sampledNormal.y *= -1;
             sampledNormal = this.tbn.mulVector(sampledNormal, 0);
             pixelNormal = sampledNormal.normalized();
+          } else {
+            alert('Normal Map error');
           }
 
           let color = this.sample(this.difuseMap, uv.x, uv.y);
@@ -495,16 +507,40 @@ export class View extends Bitmap {
 
             let diffuse = toLight.dot(pixelNormal) * this.sunIntensity;
             diffuse = Util.clamp(diffuse, this.ambient, 1.0);
-
             if (this.specularIntensity != undefined) {
-              const toView = pixelPos.mul(-1).normalized();
-              const halfway = toLight.add(toView).normalized();
-              let specular = Math.pow(
-                Math.max(pixelNormal.dot(halfway), 0),
-                this.specularIntensity
+              const n = pixelNormal.normalized();
+              const v = toLight.normalized();
+              const l = this.sunDirVS;
+              const nl2 = 2 * n.dot(l);
+              const r = l.sub(n.mul(nl2).normalized()).normalized();
+              const rv = r.dot(v);
+              const specular = this.specularIntensity ** rv;
+
+              let sampleSpecularCoef = this.sample(
+                this.specularMap,
+                uv.x,
+                uv.y
               );
-              diffuse += specular;
+              const finalCoef = sampleSpecularCoef / (255 * 255 * 255);
+              diffuse += specular * finalCoef;
             }
+
+            // if (this.specularIntensity != undefined) {
+            //   const toView = pixelPos.mul(-1).normalized();
+            //   const halfway = toLight.add(toView).normalized();
+            //   let specular = Math.pow(
+            //     Math.max(pixelNormal.dot(halfway), 0),
+            //     this.specularIntensity
+            //   );
+            //   let sampleSpecularCoef = this.sample(
+            //     this.specularMap,
+            //     uv.x,
+            //     uv.y
+            //   );
+            //   const finalCoef = sampleSpecularCoef / (255 * 255 * 255);
+
+            //   diffuse += specular * 1;
+            // }
 
             color = Util.mulColor(color, diffuse);
           }
@@ -530,7 +566,6 @@ export class View extends Bitmap {
   drawModel(model, flag) {
     if (flag == undefined) this.renderFlag |= this.RENDER_CCW;
     else this.renderFlag = flag;
-
     for (let i = 0; i < model.faces.length; i++) this.drawFace(model.faces[i]);
 
     this.renderFlag = 0;
@@ -597,10 +632,17 @@ export class View extends Bitmap {
     return p.x < 0 || p.x >= this.width || p.y < 0 || p.y >= this.height;
   }
 
-  setTexture(diffuseMap, normalMap, specularIntensity, normalMapFlipY) {
+  setTexture(
+    diffuseMap,
+    normalMap,
+    specularIntensity,
+    normalMapFlipY,
+    specularMap
+  ) {
     this.difuseMap = diffuseMap;
     this.normalMap = normalMap;
     this.specularIntensity = specularIntensity;
+    this.specularMap = specularMap;
     if (normalMapFlipY == true) this.renderFlag = this.FLIP_NORMALMAP_Y;
   }
 }

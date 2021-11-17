@@ -16,12 +16,11 @@ export class Model {
 
       let face = [];
       for (let v = 0; v < 3; v++) {
-        // console.log(vFace, vFace[v]);
-        if (isNaN(vFace[v][0])) {
-          vFace[v] = [1, 1, 1];
-        }
+        // if (isNaN(vFace[v][0])) {
+        //   vFace[v] = [1, 1, 1];
+        // }
         const pos = this.getPosition(vFace[v][0] - 1);
-        const tex = undefined; //this.getTexCoord(vFace[v][1] - 1);
+        const tex = this.getTexCoord(vFace[v][1] - 1);
         const nor = this.getNormal(vFace[v][2] - 1);
         face.push(new Vertex(pos, 0xffffff, tex, nor));
       }

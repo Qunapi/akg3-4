@@ -51,30 +51,30 @@ export class Game {
     this.tmpCvs = document.createElement('canvas');
     this.tmpGfx = this.tmpCvs.getContext('2d');
 
-    for (const key in Resources.textures) {
-      if (Object.hasOwnProperty.call(Resources.textures, key)) {
-        const imageURL = Resources.textures[key][0];
-        const imageWidth = Resources.textures[key][1][0];
-        const imageHeight = Resources.textures[key][1][1];
+    // for (const key in Resources.textures) {
+    //   if (Object.hasOwnProperty.call(Resources.textures, key)) {
+    //     const imageURL = Resources.textures[key][0];
+    //     const imageWidth = Resources.textures[key][1][0];
+    //     const imageHeight = Resources.textures[key][1][1];
 
-        let image = new Image();
-        image.src = imageURL;
-        image.crossOrigin = 'Anonymous';
-        image.onload = () => {
-          this.tmpCvs.setAttribute('width', imageWidth + 'px');
-          this.tmpCvs.setAttribute('height', imageHeight + 'px');
-          // Loading textures.
+    //     let image = new Image();
+    //     image.src = imageURL;
+    //     image.crossOrigin = 'Anonymous';
+    //     image.onload = () => {
+    //       this.tmpCvs.setAttribute('width', imageWidth + 'px');
+    //       this.tmpCvs.setAttribute('height', imageHeight + 'px');
+    //       // Loading textures.
 
-          this.tmpGfx.drawImage(image, 0, 0, imageWidth, imageHeight);
+    //       this.tmpGfx.drawImage(image, 0, 0, imageWidth, imageHeight);
 
-          image = this.tmpGfx.getImageData(0, 0, imageWidth, imageHeight);
-          image = Util.convertImageDataToBitmap(image, imageWidth, imageHeight);
+    //       image = this.tmpGfx.getImageData(0, 0, imageWidth, imageHeight);
+    //       image = Util.convertImageDataToBitmap(image, imageWidth, imageHeight);
 
-          Resources.textures[key] = image;
-          Constants.loadedResources++;
-        };
-      }
-    }
+    //       Resources.textures[key] = image;
+    //       Constants.loadedResources++;
+    //     };
+    //   }
+    // }
 
     window.addEventListener(
       'mousedown',
@@ -161,7 +161,6 @@ export class Game {
       this.times.shift();
 
     const delta = (now - this.times[this.times.length - 1]) / 1000.0;
-    // console.log("frame time:", delta * 1000.0);
 
     this.times.push(now);
     this.fps = this.times.length;
@@ -196,7 +195,6 @@ export class Game {
     //     60
     //   );
     // }
-
     if (this.started && !this.pause) {
       this.update(delta);
       this.render();

@@ -4,6 +4,7 @@ import { Model } from './model.js';
 import * as Resources from './resources.js';
 import { Constants } from './constants.js';
 import { Game } from './game.js';
+import * as Util from './utils.js';
 
 window.onload = () => {
   new Game().start();
@@ -18,7 +19,6 @@ function setNewObj(newObj) {
   let normals = [];
   let indices = [];
 
-  console.log(newObj);
   for (const line of lines) {
     const tokens = line.replace('\r', '').split(' ');
     switch (tokens[0]) {
@@ -60,7 +60,6 @@ function setNewObj(newObj) {
               da.forEach(valueToParse => {
                 const value = parseInt(valueToParse);
                 if (isNaN(value)) {
-                  // console.log('nan', da);
                 }
                 v.push(value);
               });
@@ -85,7 +84,8 @@ function setNewObj(newObj) {
     }
   }
   Constants.loadedResources++;
-  Resources.models['man'] = new Model(positions, texCoords, normals, indices);
+  const newModel = new Model(positions, texCoords, normals, indices);
+  Resources.models['man'] = newModel;
 }
 
 function getTrianglesFromPolygon(numOfCorners) {
@@ -105,12 +105,85 @@ function getTrianglesFromPolygon(numOfCorners) {
   }
   return res;
 }
+const tmpCvs = document.createElement('canvas');
+const tmpGfx = tmpCvs.getContext('2d');
 
 const fileInput = document.getElementById('file_input');
-fileInput.onchange = function onChangeFile() {
+fileInput.onchange = function () {
   const fr = new FileReader();
   fr.onload = function onLoadFile() {
     setNewObj(this.result);
   };
   fr.readAsText(this.files[0]);
+};
+
+function createImage(imgFile, name) {
+  // const imageURL = Resources.textures[key][0];
+  // const imageWidth = Resources.textures[key][1][0];
+  // const imageHeight = Resources.textures[key][1][1];
+
+  let image = new Image();
+  image.src = imgFile;
+  image.crossOrigin = 'Anonymous';
+
+  image.onload = () => {
+    console.dir(image);
+    const imageWidth = image.width;
+    const imageHeight = image.height;
+    // document.body.appendChild(image);
+
+    tmpCvs.setAttribute('width', imageWidth + 'px');
+    tmpCvs.setAttribute('height', imageHeight + 'px');
+    // // Loading textures.
+
+    tmpGfx.drawImage(image, 0, 0, imageWidth, imageHeight);
+
+    image = tmpGfx.getImageData(0, 0, imageWidth, imageHeight);
+    image = Util.convertImageDataToBitmap(image, imageWidth, imageHeight);
+
+    Constants.loadedResources++;
+    Resources.textures[name] = image;
+
+    // return image;
+  };
+}
+
+function setDiffuse(image) {
+  createImage(image, 'diffuse');
+}
+
+function setNormals(image) {
+  createImage(image, 'normals');
+}
+
+function setSpecular(image) {
+  createImage(image, 'specular');
+}
+
+const fileInputDiffuse = document.getElementById('file_input_diffuse');
+fileInputDiffuse.onchange = function () {
+  const fr = new FileReader();
+
+  fr.onload = function onLoadFile() {
+    setDiffuse(this.result);
+  };
+  fr.readAsDataURL(this.files[0]);
+};
+
+const fileInputNormals = document.getElementById('file_input_normals');
+fileInputNormals.onchange = function () {
+  const fr = new FileReader();
+  fr.onload = function onLoadFile() {
+    setNormals(this.result);
+  };
+  fr.readAsDataURL(this.files[0]);
+};
+
+const fileInputSpecular = document.getElementById('file_input_specular');
+fileInputSpecular.onchange = function () {
+  const fr = new FileReader();
+  fr.onload = function onLoadFile() {
+    setSpecular(this.result);
+  };
+  fr.readAsDataURL(this.files[0]);
 };
