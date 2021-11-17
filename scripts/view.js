@@ -507,11 +507,32 @@ export class View extends Bitmap {
 
             let diffuse = toLight.dot(pixelNormal) * this.sunIntensity;
             diffuse = Util.clamp(diffuse, this.ambient, 1.0);
+
+            // if (this.specularIntensity != undefined) {
+            //   const n = pixelNormal.normalized();
+            //   const v = pixelPos.normalized();
+            //   const l = toLight;
+            //   const nl2 = 2 * n.dot(l);
+            //   const r = l.sub(n.mul(nl2));
+            //   const rv = r.dot(v);
+            //   if (rv >= 0) {
+            //     const specular = rv ** this.specularIntensity;
+            //     let sampleSpecularCoef = this.sample(
+            //       this.specularMap,
+            //       uv.x,
+            //       uv.y
+            //     );
+            //     const finalCoef = sampleSpecularCoef / (255 * 255 * 255);
+            //     diffuse += specular * finalCoef;
+            //     // diffuse += specular;
+            //   }
+            // }
+
             if (this.specularIntensity != undefined) {
               const n = pixelNormal.normalized();
               const v = toLight.normalized();
               const l = this.sunDirVS;
-              const nl2 = 2 * n.dot(l);
+              const nl2 = n.dot(l);
               const r = l.sub(n.mul(nl2).normalized()).normalized();
               const rv = r.dot(v);
               const specular = this.specularIntensity ** rv;
