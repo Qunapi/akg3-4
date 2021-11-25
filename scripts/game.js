@@ -34,6 +34,7 @@ export class Game {
       dx: 0.0,
       dy: 0.0,
     };
+    this.postprocessEnabled = [false, false, true, false, false];
   }
 
   start() {
@@ -42,39 +43,14 @@ export class Game {
   }
 
   init() {
+    window.blurVal = 1;
+    window.expose = 2;
     this.cvs = document.getElementById('canvas');
     this.gfx = this.cvs.getContext('2d');
-
     this.gfx.font = '60px verdana';
-    // this.gfx.fillText('Loading...', 10, 60);
 
     this.tmpCvs = document.createElement('canvas');
     this.tmpGfx = this.tmpCvs.getContext('2d');
-
-    // for (const key in Resources.textures) {
-    //   if (Object.hasOwnProperty.call(Resources.textures, key)) {
-    //     const imageURL = Resources.textures[key][0];
-    //     const imageWidth = Resources.textures[key][1][0];
-    //     const imageHeight = Resources.textures[key][1][1];
-
-    //     let image = new Image();
-    //     image.src = imageURL;
-    //     image.crossOrigin = 'Anonymous';
-    //     image.onload = () => {
-    //       this.tmpCvs.setAttribute('width', imageWidth + 'px');
-    //       this.tmpCvs.setAttribute('height', imageHeight + 'px');
-    //       // Loading textures.
-
-    //       this.tmpGfx.drawImage(image, 0, 0, imageWidth, imageHeight);
-
-    //       image = this.tmpGfx.getImageData(0, 0, imageWidth, imageHeight);
-    //       image = Util.convertImageDataToBitmap(image, imageWidth, imageHeight);
-
-    //       Resources.textures[key] = image;
-    //       Constants.loadedResources++;
-    //     };
-    //   }
-    // }
 
     window.addEventListener(
       'mousedown',
@@ -133,6 +109,7 @@ export class Game {
 
     this.player = new Player(this.keys, this.mouse);
     this.view = new View(Constants.WIDTH, Constants.HEIGHT, this.player);
+    window.view = this.view;
 
     let sample = new Bitmap(64, 64);
     for (let i = 0; i < 64 * 64; i++) {
@@ -183,18 +160,6 @@ export class Game {
       );
       this.gfx.font = '48px verdana';
     }
-    // if (!this.started) {
-    //   this.gfx.clearRect(0, 0, this.cvs.width, this.cvs.height);
-    //   this.gfx.fillText(
-    //     'Loading...' +
-    //       Util.int(
-    //         (Constants.loadedResources / Constants.resourceReady) * 100
-    //       ) +
-    //       '%',
-    //     10,
-    //     60
-    //   );
-    // }
     if (this.started && !this.pause) {
       this.update(delta);
       this.render();
@@ -219,20 +184,11 @@ export class Game {
   render() {
     this.view.clear(0x808080);
     this.view.renderView();
-
-    if (true) {
-      this.tmpGfx.putImageData(Util.convertBitmapToImageData(this.view), 0, 0);
-      this.gfx.save();
-      this.gfx.imageSmoothingEnabled = false;
-      // this.gfx.scale(Constants.SCALE, Constants.SCALE);
-      this.gfx.drawImage(this.tmpCvs, 0, 0);
-      this.gfx.restore();
-    } else {
-      this.gfx.putImageData(
-        Util.convertBitmapToImageData(this.view, Constants.SCALE),
-        0,
-        0
-      );
-    }
+    this.view.postProcess(this.postprocessEnabled);
+    this.tmpGfx.putImageData(Util.convertBitmapToImageData(this.view), 0, 0);
+    this.gfx.save();
+    this.gfx.imageSmoothingEnabled = false;
+    this.gfx.drawImage(this.tmpCvs, 0, 0);
+    this.gfx.restore();
   }
 }

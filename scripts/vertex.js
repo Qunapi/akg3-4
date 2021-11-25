@@ -2,7 +2,7 @@ import { Vector2 } from './vec2.js';
 import { Vector3 } from './vec3.js';
 
 export class Vertex {
-  constructor(pos, color, texCoord, normal, tangent, biTangent) {
+  constructor(pos, color, texCoord, normal, tangent, biTangent, bloom) {
     this.pos = pos;
 
     if (typeof color == 'number')
@@ -20,5 +20,6 @@ export class Vertex {
     this.normal = normal;
     this.tangent = tangent;
     this.biTangent = biTangent;
+    this.bloom = bloom;
   }
 }

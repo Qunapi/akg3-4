@@ -160,6 +160,10 @@ function setSpecular(image) {
   createImage(image, 'specular');
 }
 
+function setBloom(image) {
+  createImage(image, 'bloom');
+}
+
 const fileInputDiffuse = document.getElementById('file_input_diffuse');
 fileInputDiffuse.onchange = function () {
   const fr = new FileReader();
@@ -184,6 +188,15 @@ fileInputSpecular.onchange = function () {
   const fr = new FileReader();
   fr.onload = function onLoadFile() {
     setSpecular(this.result);
+  };
+  fr.readAsDataURL(this.files[0]);
+};
+
+const fileInputBloom = document.getElementById('file_input_bloom');
+fileInputBloom.onchange = function () {
+  const fr = new FileReader();
+  fr.onload = function onLoadFile() {
+    setBloom(this.result);
   };
   fr.readAsDataURL(this.files[0]);
 };

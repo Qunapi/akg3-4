@@ -27,6 +27,18 @@ export class View extends Bitmap {
 
     this.tbn = new Matrix4();
 
+    this.gaussianBlurKernel = [
+      1.0 / 16.0,
+      2.0 / 16.0,
+      1.0 / 16.0,
+      2.0 / 16.0,
+      4.0 / 16.0,
+      2.0 / 16.0,
+      1.0 / 16.0,
+      2.0 / 16.0,
+      1.0 / 16.0,
+    ];
+
     this.backFaceCulling = false;
 
     this.RENDER_CW = 0;
@@ -43,7 +55,7 @@ export class View extends Bitmap {
   }
 
   update(delta) {
-    let matrix = new Matrix4().rotate(0, delta * 1.5, 0);
+    let matrix = new Matrix4().rotate(0, delta * 1, 0);
     // let matrix = new Matrix4();
 
     this.sunPosRelativeToZero = matrix
@@ -56,10 +68,7 @@ export class View extends Bitmap {
   }
 
   renderView() {
-    // this.clear(0xff00ff);
-
     for (let i = 0; i < this.zBuffer.length; i++) this.zBuffer[i] = 100000;
-
     this.renderScene();
   }
   logged = false;
@@ -68,21 +77,43 @@ export class View extends Bitmap {
     this.renderFlag = 0;
 
     this.transform = new Matrix4().translate(-2, 0, -10);
-    // this.transform = this.transform.rotate(0, time, 0);
     this.transform = this.transform.scale(0.5);
-    // this.setTexture(Resources.textures.brickwall, Resources.textures.brickwall_normal);
-    // if (this.logged === false && Resources.models.man) {
-    //   console.log(Resources.models.man);
-    //   this.logged = true;
-    // }
     this.setTexture(
       Resources.textures.diffuse,
       Resources.textures.normals,
       this.specularIntensity,
       undefined,
-      Resources.textures.specular
+      Resources.textures.specular,
+      Resources.textures.bloom
     );
     this.drawModel(Resources.models.man);
+  }
+
+  postProcess() {
+    for (let j = 0; j < window.blurVal; ++j) {
+      let result = new Uint32Array(this.width * this.height);
+
+      for (let i = 0; i < this.bPixels.length; i++) {
+        const x = i % this.width;
+        const y = Math.floor(i / this.width);
+
+        const kernelResult = this.kernel(this, this.gaussianBlurKernel, x, y);
+
+        // let res = kernelResult;
+        let res = Util.convertColor2VectorRange1(this.pixels[x + y * this.width]).add(kernelResult);
+        res.x = Math.exp(-res.x * window.expose);
+        res.y = Math.exp(-res.y * window.expose);
+        res.z = Math.exp(-res.z * window.expose);
+        res = new Vector3(1, 1, 1).sub(res);
+
+        res = Util.clipColorVector(res.mul(255));
+        res = Util.convertVector2ColorHex(res);
+
+        result[i] = res;
+      }
+
+      this.pixels = result;
+    }
   }
 
   kernel(texture, kernel, xp, yp) {
@@ -101,7 +132,7 @@ export class View extends Bitmap {
         if (yy >= texture.height) yy = texture.height - 1;
 
         const sample = Util.convertColor2VectorRange1(
-          texture.pixels[xx + yy * texture.width]
+          texture.bPixels[xx + yy * texture.width]
         );
 
         const kernelValue = kernel[x + y * kernelSize];
@@ -109,9 +140,6 @@ export class View extends Bitmap {
         res = res.add(sample.mul(kernelValue));
       }
     }
-
-    res = Util.clipColorVector(res.mul(255));
-    res = Util.convertVector2ColorHex(res);
 
     return res;
   }
@@ -467,66 +495,24 @@ export class View extends Bitmap {
             z
           );
 
-          const pixelPos = vp0.pos
-            .mul(w0)
-            .add(vp1.pos.mul(w1))
-            .add(vp2.pos.mul(w2))
-            .mulXYZ(1, 1, -1);
-
           let pixelNormal = undefined;
-          //  Util.lerp3AttributeVec3(
-          //   vp0.normal,
-          //   vp1.normal,
-          //   vp2.normal,
-          //   w0,
-          //   w1,
-          //   w2,
-          //   z0,
-          //   z1,
-          //   z2,
-          //   z
-          // );
-
           if (this.normalMap != undefined) {
-            // console.log(this.normalMap);
             let sampledNormal = this.sample(this.normalMap, uv.x, uv.y);
             sampledNormal =
               Util.convertColor2VectorRange2(sampledNormal).normalized();
-            // if (((this.renderFlag 1>> 6) & 1) != 1) sampledNormal.y *= -1;
-            // sampledNormal.y *= -1;
-            sampledNormal = this.tbn.mulVector(sampledNormal, 0);
+            // sampledNormal = this.tbn.mulVector(sampledNormal, 0);
             pixelNormal = sampledNormal.normalized();
           } else {
             alert('Normal Map error');
           }
 
+          this.bPixels[x + y * this.width] = this.sample(this.bloomMap, uv.x, uv.y);
+
           let color = this.sample(this.difuseMap, uv.x, uv.y);
 
           if (calcLight) {
             const toLight = this.sunDirVS.mul(-1).normalized();
-
             let diffuse = toLight.dot(pixelNormal) * this.sunIntensity;
-            diffuse = Util.clamp(diffuse, this.ambient, 1.0);
-
-            // if (this.specularIntensity != undefined) {
-            //   const n = pixelNormal.normalized();
-            //   const v = pixelPos.normalized();
-            //   const l = toLight;
-            //   const nl2 = 2 * n.dot(l);
-            //   const r = l.sub(n.mul(nl2));
-            //   const rv = r.dot(v);
-            //   if (rv >= 0) {
-            //     const specular = rv ** this.specularIntensity;
-            //     let sampleSpecularCoef = this.sample(
-            //       this.specularMap,
-            //       uv.x,
-            //       uv.y
-            //     );
-            //     const finalCoef = sampleSpecularCoef / (255 * 255 * 255);
-            //     diffuse += specular * finalCoef;
-            //     // diffuse += specular;
-            //   }
-            // }
 
             if (this.specularIntensity != undefined) {
               const n = pixelNormal.normalized();
@@ -545,23 +531,6 @@ export class View extends Bitmap {
               const finalCoef = sampleSpecularCoef / (255 * 255 * 255);
               diffuse += specular * finalCoef;
             }
-
-            // if (this.specularIntensity != undefined) {
-            //   const toView = pixelPos.mul(-1).normalized();
-            //   const halfway = toLight.add(toView).normalized();
-            //   let specular = Math.pow(
-            //     Math.max(pixelNormal.dot(halfway), 0),
-            //     this.specularIntensity
-            //   );
-            //   let sampleSpecularCoef = this.sample(
-            //     this.specularMap,
-            //     uv.x,
-            //     uv.y
-            //   );
-            //   const finalCoef = sampleSpecularCoef / (255 * 255 * 255);
-
-            //   diffuse += specular * 1;
-            // }
 
             color = Util.mulColor(color, diffuse);
           }
@@ -585,11 +554,16 @@ export class View extends Bitmap {
   }
 
   drawModel(model, flag) {
+    try {
     if (flag == undefined) this.renderFlag |= this.RENDER_CCW;
     else this.renderFlag = flag;
+    this.bPixels = this.bPixels.map(() => 0);
     for (let i = 0; i < model.faces.length; i++) this.drawFace(model.faces[i]);
-
+    
     this.renderFlag = 0;
+    } catch(e) {
+      debugger;
+    }
   }
 
   projectionTransform(v) {
@@ -658,12 +632,14 @@ export class View extends Bitmap {
     normalMap,
     specularIntensity,
     normalMapFlipY,
-    specularMap
+    specularMap,
+    bloomMap
   ) {
     this.difuseMap = diffuseMap;
     this.normalMap = normalMap;
     this.specularIntensity = specularIntensity;
     this.specularMap = specularMap;
+    this.bloomMap = bloomMap;
     if (normalMapFlipY == true) this.renderFlag = this.FLIP_NORMALMAP_Y;
   }
 }

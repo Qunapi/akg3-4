@@ -3,6 +3,7 @@ export class Bitmap {
     this.width = width;
     this.height = height;
     this.pixels = new Uint32Array(width * height);
+    this.bPixels = new Uint32Array(width * height);
   }
 
   render(bitmap, ox, oy) {

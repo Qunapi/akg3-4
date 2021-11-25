@@ -156,6 +156,24 @@ export function mulColor(hex, per) {
   return int(r << 16) | int(g << 8) | int(b);
 }
 
+export function mulColorB(hex, per) {
+  let r = ((hex >> 16) & 0xff) * per;
+  let g = ((hex >> 8) & 0xff) * per;
+  let b = (hex & 0xff) * per;
+  
+  let isBrightness = false;
+  if (r > 150 || g > 150 || b > 150) {
+    console.log('da');
+    isBrightness = true;
+  }
+
+  r = clamp(r, 0, 255); 
+  g = clamp(g, 0, 255);
+  b = clamp(b, 0, 255);
+
+  return [int(r << 16) | int(g << 8) | int(b), isBrightness];
+}
+
 export function addColor(hex, val) {
   const r = clamp(((hex >> 16) & 0xff) + val, 0, 255);
   const g = clamp(((hex >> 8) & 0xff) + val, 0, 255);
