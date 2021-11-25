@@ -506,7 +506,7 @@ export class View extends Bitmap {
             alert('Normal Map error');
           }
 
-          this.bPixels[x + y * this.width] = this.sample(this.bloomMap, uv.x, uv.y);
+          this.bPixels[x + (this.height -  y) * this.width] = this.sample(this.bloomMap, uv.x, uv.y);
 
           let color = this.sample(this.difuseMap, uv.x, uv.y);
 
