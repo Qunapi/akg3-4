@@ -55,7 +55,8 @@ export class View extends Bitmap {
   }
 
   update(delta) {
-    let matrix = new Matrix4().rotate(0, delta * 1, 0);
+    const curDelta = window.turn ? delta * 1 : 0;
+    let matrix = new Matrix4().rotate(0, curDelta, 0);
     // let matrix = new Matrix4();
 
     this.sunPosRelativeToZero = matrix
@@ -90,30 +91,41 @@ export class View extends Bitmap {
   }
 
   postProcess() {
+    let result = new Uint32Array(this.width * this.height);
     for (let j = 0; j < window.blurVal; ++j) {
-      let result = new Uint32Array(this.width * this.height);
-
       for (let i = 0; i < this.bPixels.length; i++) {
         const x = i % this.width;
         const y = Math.floor(i / this.width);
 
         const kernelResult = this.kernel(this, this.gaussianBlurKernel, x, y);
 
-        // let res = kernelResult;
-        let res = Util.convertColor2VectorRange1(this.pixels[x + y * this.width]).add(kernelResult);
-        res.x = Math.exp(-res.x * window.expose);
-        res.y = Math.exp(-res.y * window.expose);
-        res.z = Math.exp(-res.z * window.expose);
-        res = new Vector3(1, 1, 1).sub(res);
-
+        let res = kernelResult;
         res = Util.clipColorVector(res.mul(255));
         res = Util.convertVector2ColorHex(res);
 
         result[i] = res;
       }
-
-      this.pixels = result;
     }
+
+    for (let i = 0; i < this.pixels.length; i++) {
+      const x = i % this.width;
+      const y = Math.floor(i / this.width);
+
+      let res = Util.convertColor2VectorRange1(this.pixels[x + y * this.width]).add(
+        Util.convertColor2VectorRange1(result[x + y * this.width])
+      );
+      res.x = Math.exp(-res.x * window.expose);
+      res.y = Math.exp(-res.y * window.expose);
+      res.z = Math.exp(-res.z * window.expose);
+      res = new Vector3(1, 1, 1).sub(res);
+
+      res = Util.clipColorVector(res.mul(255));
+      res = Util.convertVector2ColorHex(res);
+
+      result[i] = res;
+    }
+    
+    this.pixels = result;
   }
 
   kernel(texture, kernel, xp, yp) {
@@ -506,8 +518,6 @@ export class View extends Bitmap {
             alert('Normal Map error');
           }
 
-          this.bPixels[x + (this.height -  y) * this.width] = this.sample(this.bloomMap, uv.x, uv.y);
-
           let color = this.sample(this.difuseMap, uv.x, uv.y);
 
           if (calcLight) {
@@ -535,7 +545,7 @@ export class View extends Bitmap {
             color = Util.mulColor(color, diffuse);
           }
 
-          this.renderPixel(new Vector3(x, y, z + depthMin), color);
+          this.renderPixel(new Vector3(x, y, z + depthMin), color, this.sample(this.bloomMap, uv.x, uv.y));
         }
       }
     }
@@ -611,13 +621,14 @@ export class View extends Bitmap {
     return new Vertex(newPos, v.color, v.texCoord, newNor, newTan, newBiTan);
   }
 
-  renderPixel(p, c) {
+  renderPixel(p, c, bc) {
     if (
       !this.checkOutOfScreen(p) &&
       p.z < this.zBuffer[p.x + (Constants.HEIGHT - 1 - p.y) * Constants.WIDTH]
     ) {
       if (typeof c != 'number') c = Util.convertVector2ColorHex(c);
 
+      this.bPixels[p.x + (Constants.HEIGHT - 1 - p.y) * this.width] = bc;
       this.pixels[p.x + (Constants.HEIGHT - 1 - p.y) * this.width] = c;
       this.zBuffer[p.x + (Constants.HEIGHT - 1 - p.y) * this.width] = p.z;
     }

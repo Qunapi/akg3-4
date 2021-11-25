@@ -45,6 +45,7 @@ export class Game {
   init() {
     window.blurVal = 1;
     window.expose = 2;
+    window.turn = true;
     this.cvs = document.getElementById('canvas');
     this.gfx = this.cvs.getContext('2d');
     this.gfx.font = '60px verdana';
